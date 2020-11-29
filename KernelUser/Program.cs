@@ -74,7 +74,7 @@ class Program
 
     public static void V3()
     {
-        ThreadPool.SetMaxThreads(1, 1);
+        ThreadPool.SetMaxThreads(10, 10);
         for (int i = 0; i < ITERATIONS; i++)
         {
             var queueTime = DateTime.Now;

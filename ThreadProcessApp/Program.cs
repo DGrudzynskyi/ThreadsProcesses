@@ -9,8 +9,8 @@ namespace ThreadProcessApp
     {
         static void Main(string[] args)
         {
-            //CallChildProcessSeparateWindow();
-            CallChildProcessSameWindow();
+            CallChildProcessSeparateWindow();
+            //CallChildProcessSameWindow();
         }
 
         static void CallChildProcessSeparateWindow() {
@@ -35,6 +35,9 @@ namespace ThreadProcessApp
         {
             using (Process process = new Process())
             {
+                // отпускаем какую то работу делаться в потоке, который является частью текущего процесса
+                DoSomeWorkInAnotherThread();
+
                 process.StartInfo.FileName = "SortItemsApp.exe";
                 // запрещаем вызов консольки для запускаемового приложения
                 process.StartInfo.UseShellExecute = false;
@@ -44,9 +47,6 @@ namespace ThreadProcessApp
                 // т.е. теперь наш вызов равен вызову в консоли "SortItemsApp.exe a b x c"
                 process.StartInfo.Arguments = "a b x c";
                 process.Start();
-
-                // отпускаем какую то работу делаться в потоке, который является частью текущего процесса
-                DoSomeWorkInAnotherThread();
 
                 // ждём пока закончится дочерний процесс
                 
@@ -71,7 +71,6 @@ namespace ThreadProcessApp
 
                 while (true)
                 {
-                    /* run your code here */
                     Thread.Sleep(1000);
                     Console.WriteLine("I am doing some work while main thread is locked....");
                 }
