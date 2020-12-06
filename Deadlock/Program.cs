@@ -12,15 +12,15 @@ namespace Deadlock
 
         static void Main(string[] args)
         {
-            var account1 = new Account("oleg");
-            var account2 = new Account("sasha");
+            var account1 = new Account("oleg",1);
+            var account2 = new Account("sasha",2);
 
 
             var thread1 = new Thread(() => {
-                Program.makeALotOfTransfers(account1, account2);
+                makeALotOfTransfers(account1, account2);
             });
             var thread2 = new Thread(() => {
-                Program.makeALotOfTransfers(account2, account1);
+                makeALotOfTransfers(account2, account1);
             });
 
 
@@ -34,14 +34,14 @@ namespace Deadlock
                     thread2.ThreadState == System.Threading.ThreadState.Stopped;
             }
 
-            Console.Write(account1.getStatus());
-            Console.Write(account2.getStatus());
+            Console.WriteLine(account1.getStatus());
+            Console.WriteLine(account2.getStatus());
 
             Console.ReadLine();
         }
 
         public static void makeALotOfTransfers(Account acc1, Account acc2) {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 acc1.transfer(acc2, 100);
             }
@@ -52,9 +52,12 @@ namespace Deadlock
     {
         private double balance;
         private string name;
+        private int id;
 
-        public Account(string name) {
+        public Account(string name, int id) {
             this.name = name;
+            this.balance = 2000;
+            this.id = id;
         }
 
         public void withdraw(double amount)
@@ -77,17 +80,18 @@ namespace Deadlock
 
         public void transfer(Account to, double amount)
         {
+            //var firstAcc = this.id < to.id ? this : to;
+            //var secondAcc = this.id >= to.id ? this : to;
+
             lock (this)
             {
                 lock (to)
                 {
                     this.withdraw(amount);
                     to.deposit(amount);
-                    Console.WriteLine(String.Format("transferred {0} from {1} to {2}", amount, this.getName(), to.getName()));
+                    //Console.WriteLine(String.Format("transferred {0} from {1} to {2}", amount, this.getName(), to.getName()));
                 }
-                var t = false;
             }
-            var s = false;
         }
 
     }

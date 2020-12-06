@@ -21,8 +21,18 @@ namespace Concurrency
                 {
                     //lock (theLocker)
                     //{
-                        ++theNumber;
+                        theNumber = theNumber + 1;
                     //}
+                    /*
+                    Monitor.Enter(theLocker);
+                    try
+                    {
+                        theNumber = theNumber + 1;
+                    }
+                    finally
+                    {
+                        Monitor.Exit(theLocker);
+                    }*/
                 }
             };
 

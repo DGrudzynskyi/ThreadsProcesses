@@ -8,7 +8,7 @@ using System.Threading;
 
 class Program
 {
-    static int ITERATIONS = 1000;
+    static int ITERATIONS = 500;
     static CountdownEvent done = new CountdownEvent(ITERATIONS);
     static DateTime startTime = DateTime.Now;
     static TimeSpan totalLatency = TimeSpan.FromSeconds(0);
@@ -57,8 +57,8 @@ class Program
 
     public static void V2()
     {
-        ThreadPool.SetMinThreads(1000, 1);
-        ThreadPool.SetMaxThreads(1000, 1);
+        ThreadPool.SetMinThreads(ITERATIONS, 1);
+        ThreadPool.SetMaxThreads(ITERATIONS, 1);
         for (int i = 0; i < ITERATIONS; i++)
         {
             var queueTime = DateTime.Now;
@@ -74,7 +74,7 @@ class Program
 
     public static void V3()
     {
-        ThreadPool.SetMaxThreads(10, 10);
+        ThreadPool.SetMaxThreads(2, 2);
         for (int i = 0; i < ITERATIONS; i++)
         {
             var queueTime = DateTime.Now;

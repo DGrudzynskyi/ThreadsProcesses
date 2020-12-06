@@ -11,59 +11,89 @@ namespace Queues
     {
         static void Main(string[] args)
         {
-            var queue = new LIFOQueue(100);
+            var queue = new FIFOQueue(10000);
 
-            ThreadPool.QueueUserWorkItem((o) =>
-            {
-                for (int i = 0; i < 10000; i++) {
-                    queue.Put(i.ToString());
-                    queue.Pick();
-                }
-                Console.WriteLine("1");
-            });
+            // uncomment below to observe concurrency issues even while all methods of FIFOQueue using locks inside
+            //for (int i = 0; i < 10000; i++) {
+            //    queue.Put(i);
+            //}
+            //ThreadPool.QueueUserWorkItem((o) => DequeueWhileExists(queue));
+            //ThreadPool.QueueUserWorkItem((o) => DequeueWhileExists(queue));
 
-            ThreadPool.QueueUserWorkItem((o) =>
-            {
-                for (int i = 0; i < 10000; i++)
-                {
-                    queue.Put(i.ToString());
-                    queue.Pick();
-                }
-                Console.WriteLine("2");
-            });
+
+            ThreadPool.QueueUserWorkItem((o) => PutThenPick(queue));
+            ThreadPool.QueueUserWorkItem((o) => PutThenPick(queue));
+
+            Thread.Sleep(2000);
 
             Console.ReadLine();
+        }
+
+        static void PutThenPick(FIFOQueue queue)
+        {
+            for (int i = 0; i < 10000; i++)
+            {
+                queue.Put(i);
+                queue.Pick();
+            }
+            Console.WriteLine("done");
+        }
+
+        static void DequeueWhileExists(FIFOQueue queue) {
+            while (true)
+            {
+                if (queue.Count() > 0)
+                {
+                    queue.Pick();
+                }
+            }
         }
     }
 
     interface IQueue {
-        string Pick();
+        int Pick();
 
-        void Put(string putIt);
+        void Put(int putIt);
     }
 
-    class LIFOQueue : IQueue
+    class FIFOQueue : IQueue
     {
-        private string[] holder;
+        private int[] holder;
         private int length;
 
-        public LIFOQueue(int capacity) {
-            holder = new string[capacity];
+        public FIFOQueue(int capacity) {
+            holder = new int[capacity];
         }
 
-        public string Pick()
+        public int Count()
         {
-                var retIt = holder[length];
+            return this.length;
+        }
+
+        public int Pick()
+        {
+            lock (holder)
+            {
+                var retIt = holder[length - 1];
                 length--;
                 return retIt;
-            
+            }
         }
 
-        public void Put(string putIt)
+        public void Put(int putIt)
         {
-                holder[length] = putIt;
+            lock (holder)
+            {
+                if (length == holder.Length) {
+                    return;
+                }
+
+                for (int i = length - 1; i >= 0; i--) {
+                    holder[i + 1] = holder[i];
+                }
+                holder[0] = putIt;
                 length++;
-           
+            }
         }
     }
 }
