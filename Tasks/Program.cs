@@ -9,54 +9,74 @@ using System.Threading.Tasks;
 
 namespace Tasks
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            var mywatch = new Stopwatch();
-            mywatch.Start();
-            var fibb = Fibbon(0, 1, 1000000);
-            mywatch.Stop();
-            Console.WriteLine(fibb);
-            //ContinueWithCancellatino();
+            //TaskRun();
+            //ContinueWithCancellation();
             //AwaitExample();
             //AwaitAllExample();
             //ContinueWithExample();
             //ContinueWithAllExample();
-            Console.WriteLine("Time consumed is : " + mywatch.ElapsedMilliseconds.ToString());
+            TaskSchedulerExample.RunExample();
             Console.ReadLine();
         }
 
-        public static long Fibbon(long i, long k, long n) {
-            var prevValue = i;
-            var curValue = k;
-            var summ = 0;
+        /// <summary>
+        /// простейшее создание тасков через Task.Run или конструктор
+        /// </summary>
+        /// <returns></returns>
+        public static async Task<int> TaskRun() {
+            Console.WriteLine("Application thread ID: {0}",
+                            Thread.CurrentThread.ManagedThreadId);
 
-            for (; n >= 0; n--) {
-                var nextValue = prevValue + curValue;
-                prevValue = curValue;
-                curValue = nextValue;
-            };
-            return curValue;
+            // так можно. Создаётся и сразу же запускается
+            //var t = Task.Run(() =>
+            //{
+            //    Console.WriteLine("Task thread ID: {0}",
+            //       Thread.CurrentThread.ManagedThreadId);
+            //});
+
+
+            // и так тоже можно. в єтом случае после создания нужно явно запустить
+            var t = new Task<int>(() =>
+            {
+                Console.WriteLine("Task thread ID: {0}",
+                   Thread.CurrentThread.ManagedThreadId);
+                return 2;
+            });
+            t.Start();
+            var res = await t;
+
+            // блокирующее ожидание, может быть использовано вместо await с блокировкой вызывающего потока
+            // t.Wait();
+
+            return res;
         }
 
-
-        public static void ContinueWithCancellatino()
+        /// <summary>
+        /// cancellation token отменяется(cancell) из главного потока через 100мс. Часть запланированных задач тоже будет отменена
+        /// </summary>
+        public static void ContinueWithCancellation()
         {
             var cancellatinoTokenSource = new CancellationTokenSource();
+
             cancellatinoTokenSource.Token.Register(() => Console.WriteLine("Here cancellation is requested"));
             for (int i = 0; i < 10; i++)
             {
                 GenerateRandomNumber(cancellatinoTokenSource.Token).ContinueWith((x, index) =>
                 {
-                    // подставить i вместо индекса
                     Console.WriteLine(x.Status);
                     if (x.Status != TaskStatus.Canceled)
                     {
                         Console.WriteLine("result for task {0} = {1}", index, x.Result);
                     }
-                }, i
-                );
+                    // если CancellationToken передаётся в ContinueWith аргументом, и в момент когда GenerateRandomNumber закончен, кенслейшн токен уже отменён
+                    // - континьюейшн таск не будет выполнен вообще.
+                    // если CancellationToken НЕ передаётся в ContinueWith аргументом, и в момент когда GenerateRandomNumber закончен, кенслейшн токен уже отменён
+                    // - континьюейшн такс будет выполнен, понять что он был отменён можно из поля task.Status
+                }, i);// , cancellatinoTokenSource.Token);
             };
 
             Thread.Sleep(50);
@@ -73,20 +93,23 @@ namespace Tasks
         public static void ContinueWithExample() {
             for (int i = 0; i < 10; i++)
             {
-                //try
-                //{
-                var taask = GenerateRandomNumber().ContinueWith((Task<int> x, object index) => //
+                try
+                {
+                    var taask = GenerateRandomNumber().ContinueWith((Task<int> x, object index) => //
                     {
                         Console.WriteLine(x.Status);
                         // подставить i вместо индекса
                         Console.WriteLine("result for task {0} = {1}", index, x.Result);
-                    }, i
-                    );
+                        // throw new InvalidOperationException();
+                    }, i);
 
-                //}
-                //catch (Exception e) {
-                    // catchIt
-                //}
+                    // заметьте что taask.Exception сожержит не InvalidOperationException а AggregateException
+                    var checkAggregateException = taask.Exception;
+                }
+                catch (Exception e) {
+                    // заметьте что try catch не отрабатывает для тасков т.к. они не выполнены в текущем потоке (что лечится использовнием async await)
+                    var t = e;
+                }
             };
 
             Thread.Sleep(100);
@@ -99,6 +122,9 @@ namespace Tasks
             Console.ReadLine();
         }
 
+        /// <summary>
+        /// пример ожидания всех тасков и выполнения следующего кода только после того как все таски выполнены, ожидания распаралеливаются
+        /// </summary>
         public static void ContinueWithAllExample()
         {
             var tasks = new List<Task<int>>();
@@ -124,6 +150,9 @@ namespace Tasks
             Console.ReadLine();
         }
 
+        /// <summary>
+        /// пример ожидания каждого из тасков последовательно, ожидания НЕ распаралеливаются
+        /// </summary>
         public static async Task AwaitExample()
         {
             Stopwatch mywatch = new Stopwatch();
@@ -146,6 +175,9 @@ namespace Tasks
             Console.ReadLine();
         }
 
+        /// <summary>
+        /// пример ожидания всех тасков и выполнения следующего кода только после того как все таски выполнены, ожидания распаралеливаются
+        /// </summary>
         public static async Task AwaitAllExample()
         {
 
@@ -181,12 +213,19 @@ namespace Tasks
             var number = new Random().Next(1, 100);
 
             await Task.Delay(number);
-
-            // throw new InvalidOperationException();
+            //throw new InvalidOperationException();
 
             // возвращаемое значение автоматически врапится в Task
             return number;
         }
+
+        // можно так - идентично предыдущему GenerateRandomNumber но без использования синтаксиса async/await
+        //public static Task<int> GenerateRandomNumberNonAsync()
+        //{
+        //    var number = new Random().Next(1, 100);
+
+        //    return Task.Delay(number).ContinueWith((prevTask) => number);
+        //}
 
         public static async Task<int> GenerateRandomNumber(CancellationToken cancellationToken)
         {
@@ -194,7 +233,11 @@ namespace Tasks
 
             await Task.Delay(number);
 
+            // стандартный паттерн при использовании CancellationToken - перед выполнением работы проверять не отменёнё ли токен. 
+            // Если отменён - кидать специальный ексепшн OperationCanceledException вместо выполнения всех последующих действий.
             cancellationToken.ThrowIfCancellationRequested();
+
+            // тут может быть какая то ещё работа
 
             // возвращаемое значение автоматически врапится в Task
             return number;
